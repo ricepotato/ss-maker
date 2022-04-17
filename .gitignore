@@ -1,2 +1,4 @@
 yzapi-snapshot*.log
 *.pyc
+snapshots.js
+snapshots.json

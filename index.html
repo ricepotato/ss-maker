@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viewer</title>
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+        }
+        ul.list-view {
+            width: 100%;
+            list-style: none;
+            display: flex;
+            font-size: small;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+
+        li.list-item {
+            margin-top: 10px;
+            width: 270px;
+            overflow-x: hidden;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>hello viewer</h1>
+    </header>
+    <main>
+        <div><button id="btnOpen">open</button></div>
+        <div id="app">
+        </div>    
+    </main>
+    <footer></footer>
+    <script src="snapshots.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
