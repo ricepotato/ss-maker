@@ -57,11 +57,12 @@ function ListItem({ target, initialState }) {
           <a target="_blank" href="potplayer://${this.state.target.replace(
             /\\/gi,
             "/"
-          )}">${this.state.name}</a>
+          )}">pot</a> | 
+          <a target="_blank" href="${this.state.target}">browser</a>
         </span>
       </div>
       <div>
-      ${this.state.target}
+      ${this.state.name}
       </div>
     </div>
     `;

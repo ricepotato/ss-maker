@@ -104,7 +104,7 @@ def main():
     args = parser.parse_args()
 
     if not os.path.exists(args.target):
-        print("path not exists. %s", args.target)
+        print("path not exists.", args.target)
         sys.exit(1)
 
     mp4_filelist = get_filelist(args.target, ".mp4")
