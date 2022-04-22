@@ -2,10 +2,11 @@ import os
 import json
 import logging
 import multiprocessing
+import shutil
+import argparse
+import sys
 from typing import Generator, List
 from snapshot import make_snapshot
-
-target_path = "E:\\yd"
 
 
 log = logging.getLogger("app")
@@ -63,7 +64,9 @@ def make_snapshot_dir(filepath, target_path) -> str:
     return new_dir
 
 
-def process_snapshot(mp4_filepath: str) -> Snapshot:
+def process_snapshot(arg) -> Snapshot:
+    target_path = arg[0]
+    mp4_filepath = arg[1]
     log.info("processing... %s", mp4_filepath)
     snapshot_dir = make_snapshot_dir(mp4_filepath, target_path)
     snapshots = list(get_filelist(snapshot_dir, ".jpg"))
@@ -73,6 +76,11 @@ def process_snapshot(mp4_filepath: str) -> Snapshot:
     res = Snapshot(mp4_filepath)
     res.snapshots = snapshots
     return res
+
+
+def copy_to_path(filename, dest_path):
+    new_path = os.path.join(dest_path, filename)
+    shutil.copyfile(filename, new_path)
 
 
 def dump_jsonfile(snapshots: List[Snapshot], output_path):
@@ -85,12 +93,25 @@ def dump_jsonfile(snapshots: List[Snapshot], output_path):
     with open(js_filepath, "w") as f:
         f.write(f"const videos={json_str}")
 
+    copy_to_path("index.html", output_path)
+    copy_to_path("app.js", output_path)
+
 
 def main():
-    mp4_filelist = get_filelist(target_path, ".mp4")
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--target", required=True)
+    args = parser.parse_args()
+
+    if not os.path.exists(args.target):
+        print("path not exists. %s", args.target)
+        sys.exit(1)
+
+    mp4_filelist = get_filelist(args.target, ".mp4")
+    args_list = [[args.target, mp4_file] for mp4_file in mp4_filelist]
     p = multiprocessing.Pool(4)
-    snapshots = p.map(process_snapshot, mp4_filelist)
-    dump_jsonfile(snapshots, target_path)
+    snapshots = p.map(process_snapshot, args_list)
+    dump_jsonfile(snapshots, args.target)
 
 
 if __name__ == "__main__":
