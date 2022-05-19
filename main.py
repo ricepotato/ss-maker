@@ -1,3 +1,4 @@
+import hashlib
 import os
 import json
 import logging
@@ -14,11 +15,22 @@ log.addHandler(logging.StreamHandler())
 log.setLevel(logging.DEBUG)
 log = logging.getLogger(f"app.{__name__}")
 
+CHUNK_SIZE = 1024 * 1024
+
+
+def get_file_hash(filepath):
+    with open(filepath, "rb") as f:
+        data = f.read(CHUNK_SIZE)
+        sha256 = hashlib.sha256()
+        sha256.update(data)
+        return sha256.hexdigest()
+
 
 class Snapshot:
     def __init__(self, mp4_filepath: str):
         self.mp4_filepath = mp4_filepath
         self.snapshots: List[str] = []
+        self.sha256 = get_file_hash(mp4_filepath)
 
     def __str__(self):
         ssc = len(self.snapshots)
@@ -29,6 +41,7 @@ class Snapshot:
             "name": os.path.split(self.mp4_filepath)[-1],
             "target": self.mp4_filepath,
             "snapshots": self.snapshots,
+            "sha256": self.sha256,
         }
 
 
@@ -68,13 +81,16 @@ def process_snapshot(arg) -> Snapshot:
     target_path = arg[0]
     mp4_filepath = arg[1]
     log.info("processing... %s", mp4_filepath)
+
+    res = Snapshot(mp4_filepath)
     snapshot_dir = make_snapshot_dir(mp4_filepath, target_path)
+
     snapshots = list(get_filelist(snapshot_dir, ".jpg"))
     if len(snapshots) <= 0:
         log.warning("snapshot not exist. %s", snapshot_dir)
         snapshots = make_snapshot(mp4_filepath, out_path=snapshot_dir, width=250)
-    res = Snapshot(mp4_filepath)
     res.snapshots = snapshots
+    # rename_snapshot(res)
     return res
 
 
