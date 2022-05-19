@@ -65,10 +65,10 @@ def get_snapshots_filelist(root_path: str) -> Generator[str, None, None]:
             yield os.path.join(path, filename)
 
 
-def make_snapshot_dir(filepath, target_path) -> str:
+def make_snapshot_dir(filepath, target_path, sha256) -> str:
     _, name = os.path.split(filepath)
     dir_name, _ = os.path.splitext(name)
-    new_dir = os.path.join(target_path, "snapshots", dir_name)
+    new_dir = os.path.join(target_path, "snapshots", sha256)
     if not os.path.exists(new_dir):
         os.makedirs(new_dir)
         log.info("snapshot dir created. %s", new_dir)
@@ -83,7 +83,7 @@ def process_snapshot(arg) -> Snapshot:
     log.info("processing... %s", mp4_filepath)
 
     res = Snapshot(mp4_filepath)
-    snapshot_dir = make_snapshot_dir(mp4_filepath, target_path)
+    snapshot_dir = make_snapshot_dir(mp4_filepath, target_path, res.sha256)
 
     snapshots = list(get_filelist(snapshot_dir, ".jpg"))
     if len(snapshots) <= 0:
