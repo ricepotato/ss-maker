@@ -43,8 +43,7 @@ def make_snapshot(
         else:
             ratio = 1
 
-        img_filepath = os.path.join(out_path, filename)
-        img_filepath = f"{idx}.jpg"
+        img_filepath = os.path.join(out_path, f"{idx}.jpg")
         log.info("make snapshot. %s", img_filepath)
         dst = cv2.resize(
             frame, dsize=(0, 0), fx=ratio, fy=ratio, interpolation=cv2.INTER_AREA

@@ -62,7 +62,12 @@ function ListItem({ target, initialState }) {
         </span>
       </div>
       <div>
-      ${this.state.name}
+        <div>
+          ${this.state.dirname}
+        </div>
+        <div>
+          ${this.state.name}
+        <div>
       </div>
     </div>
     `;

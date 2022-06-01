@@ -31,6 +31,7 @@ class Snapshot:
         self.mp4_filepath = mp4_filepath
         self.snapshots: List[str] = []
         self.sha256 = get_file_hash(mp4_filepath)
+        self.dirname = os.path.split(os.path.dirname(mp4_filepath))[-1]
 
     def __str__(self):
         ssc = len(self.snapshots)
@@ -42,6 +43,7 @@ class Snapshot:
             "target": self.mp4_filepath,
             "snapshots": self.snapshots,
             "sha256": self.sha256,
+            "dirname": self.dirname,
         }
 
 
