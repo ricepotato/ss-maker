@@ -58,7 +58,7 @@ class Snapshot:
         out_path = self._snapshot_path / self.sha256
         shot_count = 16
         if not os.path.exists(out_path):
-            os.makedirs(out_path)
+            os.makedirs(out_path, exist_ok=True)
             snapshot_paths = make_snapshot(str(self.target), out_path=str(out_path), shot_count=shot_count, width=250)
             self.snapshots = snapshot_paths 
         else:
@@ -160,6 +160,20 @@ def dump_jsonfile(snapshots: List[Snapshot], output_path):
     copy_to_path("app.js", output_path)
 
 
+def get_target_list2(root: pathlib.Path, recursive: bool = False) -> List[pathlib.Path]:
+    target = get_target_list(root, ".mp4")
+
+    if not recursive:
+        return target.files
+    
+    files = target.files
+    for dir_item in target.dirs:
+        print("recursive dir:", dir_item)
+        files.extend(get_target_list2(dir_item, recursive=True))
+
+    return files
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--target", required=True)
@@ -170,8 +184,8 @@ def main():
         print("path not exists.", args.target)
         sys.exit(1)
 
-    target = get_target_list(args.target, ".mp4")
-    snapshot_list = [Snapshot(target) for target in target.files]
+    files = get_target_list2(args.target, recursive=args.recursive)
+    snapshot_list = [Snapshot(target) for target in files]
 
     results = []
     with ProcessPoolExecutor(max_workers=4) as executor:
