@@ -1,4 +1,4 @@
-let viewMode = 'list';
+let viewMode = 'grid';
 
 function App(app) {
   this.state = {

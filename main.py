@@ -4,6 +4,7 @@ import os
 import json
 import logging
 import multiprocessing
+from collections import defaultdict
 import shutil
 import argparse
 import sys
@@ -59,6 +60,7 @@ class Snapshot:
         self.snapshots: List[str] = []
         self._sha256 = None
         self._snapshot_path = self.target.parent / ".snapshots"
+        self._cache_entry: dict = None  # 캐시 미스 시 메인 프로세스에서 저장할 엔트리
 
     @property
     def sha256(self):
@@ -102,9 +104,8 @@ class Snapshot:
             log.warning("snapshot dir already exists. skip... %s", out_path)
             self.snapshots = get_file_list(out_path, ".jpg")
 
-        # 캐시 저장
-        cache[key] = {"size": stat.st_size, "mtime": stat.st_mtime, "sha256": self.sha256}
-        save_hash_cache(self._snapshot_path, cache)
+        # 캐시 엔트리 저장은 메인 프로세스에서 일괄 처리
+        self._cache_entry = {"size": stat.st_size, "mtime": stat.st_mtime, "sha256": self.sha256}
 
         return self
 
@@ -131,7 +132,7 @@ class Snapshot:
 def get_file_list(root_path: str, ext: str = None):
     return [os.path.join(root_path, item) for item in os.listdir(root_path)]
 
-def get_target_list(root_path: str, ext: str = None) -> Target:
+def scan_dir(root_path: str, ext: str = None) -> Target:
     files = []
     dirs = []
     for item in os.listdir(root_path):
@@ -175,7 +176,7 @@ def process_snapshot(target: pathlib.Path) -> Snapshot:
     res = Snapshot(target)
     snapshot_dir = make_snapshot_dir(mp4_filepath, target_path, res.sha256)
 
-    snapshots = list(get_target_list(snapshot_dir, ".jpg"))
+    snapshots = list(scan_dir(snapshot_dir, ".jpg"))
     if len(snapshots) <= 0:
         log.warning("snapshot not exist. %s", snapshot_dir)
         snapshots = make_snapshot(mp4_filepath, out_path=snapshot_dir, width=250)
@@ -202,16 +203,18 @@ def dump_jsonfile(snapshots: List[Snapshot], output_path):
     copy_to_path("app.js", output_path)
 
 
-def get_target_list2(root: pathlib.Path, recursive: bool = False) -> List[pathlib.Path]:
-    target = get_target_list(root, ".mp4")
+def find_mp4_files(root: pathlib.Path, recursive: bool = False) -> List[pathlib.Path]:
+    target = scan_dir(root, ".mp4")
 
     if not recursive:
         return target.files
-    
+
     files = target.files
     for dir_item in target.dirs:
+        if dir_item.name == ".snapshots":
+            continue
         log.info("recursive dir: %s", dir_item)
-        files.extend(get_target_list2(dir_item, recursive=True))
+        files.extend(find_mp4_files(dir_item, recursive=True))
 
     return files
 
@@ -226,7 +229,7 @@ def main():
         log.warning("path not exists. %s", args.target)
         sys.exit(1)
 
-    files = get_target_list2(args.target, recursive=args.recursive)
+    files = find_mp4_files(args.target, recursive=args.recursive)
     snapshot_list = [Snapshot(target) for target in files]
 
     results = []
@@ -240,6 +243,17 @@ def main():
 
         for result in futures_result:
             results.append(result)
+
+    # 캐시 엔트리를 snapshot_path 기준으로 그룹핑해서 한 번에 저장
+    cache_updates = defaultdict(dict)
+    for result in results:
+        if result is not None and result._cache_entry is not None:
+            cache_updates[result._snapshot_path][result.target.name] = result._cache_entry
+
+    for snapshot_path, entries in cache_updates.items():
+        cache = load_hash_cache(snapshot_path)
+        cache.update(entries)
+        save_hash_cache(snapshot_path, cache)
 
     dump_jsonfile(results, args.target)
 
