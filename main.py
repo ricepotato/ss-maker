@@ -20,12 +20,12 @@ log.setLevel(logging.DEBUG)
 log = logging.getLogger(f"app.{__name__}")
 
 CHUNK_SIZE = 1024 * 1024 * 10
+HASH_CACHE_FILENAME = ".hash_cache.json"
 
 
 class Target(pydantic.BaseModel):
     files: List[pathlib.Path]
     dirs: List[pathlib.Path]
-  
 
 
 def get_file_hash(filepath):
@@ -34,6 +34,23 @@ def get_file_hash(filepath):
         sha256 = hashlib.sha256()
         sha256.update(data)
         return sha256.hexdigest()
+
+
+def load_hash_cache(cache_dir: pathlib.Path) -> dict:
+    cache_path = cache_dir / HASH_CACHE_FILENAME
+    if not cache_path.exists():
+        return {}
+    try:
+        with open(cache_path, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def save_hash_cache(cache_dir: pathlib.Path, cache: dict):
+    cache_path = cache_dir / HASH_CACHE_FILENAME
+    with open(cache_path, "w") as f:
+        json.dump(cache, f)
 
 
 class Snapshot:
@@ -48,22 +65,47 @@ class Snapshot:
         if self._sha256 is None:
             self._sha256 = get_file_hash(self.target)
         return self._sha256
-    
+
     def make_snapshot_path(self):
         if not os.path.exists(self._snapshot_path):
             os.makedirs(self._snapshot_path)
 
     def make(self):
         self.make_snapshot_path()
+
+        # stat 기반 캐시 조회 — 파일 내용을 읽지 않고 sha256 복원 시도
+        cache = load_hash_cache(self._snapshot_path)
+        key = self.target.name
+        stat = self.target.stat()
+        entry = cache.get(key)
+        cache_hit = (
+            entry is not None
+            and entry.get("size") == stat.st_size
+            and entry.get("mtime") == stat.st_mtime
+        )
+
+        if cache_hit:
+            self._sha256 = entry["sha256"]
+            out_path = self._snapshot_path / self._sha256
+            if out_path.exists():
+                log.info("cache hit, skip: %s", self.target.name)
+                self.snapshots = get_file_list(out_path, ".jpg")
+                return self
+
+        # 캐시 미스: sha256 계산 후 스냅샷 생성
         out_path = self._snapshot_path / self.sha256
         shot_count = 16
-        if not os.path.exists(out_path):
+        if not out_path.exists():
             os.makedirs(out_path, exist_ok=True)
-            snapshot_paths = make_snapshot(str(self.target), out_path=str(out_path), shot_count=shot_count, width=250)
-            self.snapshots = snapshot_paths 
+            self.snapshots = make_snapshot(str(self.target), out_path=str(out_path), shot_count=shot_count, width=250)
         else:
             log.warning("snapshot dir already exists. skip... %s", out_path)
             self.snapshots = get_file_list(out_path, ".jpg")
+
+        # 캐시 저장
+        cache[key] = {"size": stat.st_size, "mtime": stat.st_mtime, "sha256": self.sha256}
+        save_hash_cache(self._snapshot_path, cache)
+
         return self
 
     @property
@@ -168,7 +210,7 @@ def get_target_list2(root: pathlib.Path, recursive: bool = False) -> List[pathli
     
     files = target.files
     for dir_item in target.dirs:
-        print("recursive dir:", dir_item)
+        log.info("recursive dir: %s", dir_item)
         files.extend(get_target_list2(dir_item, recursive=True))
 
     return files
@@ -181,7 +223,7 @@ def main():
     args = parser.parse_args()
 
     if not os.path.exists(args.target):
-        print("path not exists.", args.target)
+        log.warning("path not exists. %s", args.target)
         sys.exit(1)
 
     files = get_target_list2(args.target, recursive=args.recursive)

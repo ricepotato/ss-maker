@@ -1,3 +1,5 @@
+let viewMode = 'list';
+
 function App(app) {
   this.state = {
     videos: [],
@@ -24,7 +26,7 @@ function ListView({ target, initialState }) {
   const render = () => {
     target.innerHTML = "";
     const ul = document.createElement("ul");
-    ul.setAttribute("class", "list-view");
+    ul.setAttribute("class", viewMode === 'grid' ? "list-view grid-view" : "list-view");
 
     this.state.videos.map((item) => {
       const li = document.createElement("li");
@@ -52,22 +54,13 @@ function ListItem({ target, initialState }) {
       <div class="list-item__image_container">
         <img src='${this.state.snapshots[this.currentIndex]}'/>
       </div>
-      <div class="list-item__label_container">
-        <span>
-          <a target="_blank" href="potplayer://${this.state.target.replace(
-            /\\/gi,
-            "/"
-          )}">pot</a> | 
+      <div class="list-item__info">
+        <div class="list-item__dirname">${this.state.dirname}</div>
+        <div class="list-item__name">${this.state.name}</div>
+        <div class="list-item__links">
+          <a target="_blank" href="potplayer://${this.state.target.replace(/\\/gi, "/")}">pot</a> |
           <a target="_blank" href="${this.state.target}">browser</a>
-        </span>
-      </div>
-      <div>
-        <div>
-          ${this.state.dirname}
         </div>
-        <div>
-          ${this.state.name}
-        <div>
       </div>
     </div>
     `;
@@ -83,16 +76,14 @@ function ListItem({ target, initialState }) {
   render();
 }
 
-const btn = document.getElementById("btnOpen");
 const appElement = document.getElementById("app");
 const app = new App(appElement);
 
 app.setState({ videos: videos });
 
-btn.addEventListener("click", async () => {
-  const [fileHandle] = await window.showOpenFilePicker();
-  const file = await fileHandle.getFile();
-  const contents = await file.text();
-  const dataJson = JSON.parse(contents);
-  app.setState({ videos: dataJson });
+const btnToggleView = document.getElementById("btnToggleView");
+btnToggleView.addEventListener("click", () => {
+  viewMode = viewMode === 'list' ? 'grid' : 'list';
+  btnToggleView.textContent = viewMode === 'list' ? 'Grid' : 'List';
+  app.render();
 });
