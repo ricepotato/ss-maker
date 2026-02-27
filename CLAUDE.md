@@ -2,19 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Commands
-
-**Install dependencies (using uv):**
-```bash
-uv sync
-```
-
-**Run (must be executed from the repository root so `index.html` and `app.js` can be copied):**
-```bash
-python main.py --target /path/to/videos
-python main.py --target /path/to/videos --recursive
-```
-
 ## Architecture
 
 This is a video snapshot generator with a static HTML viewer.
