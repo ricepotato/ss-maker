@@ -3,6 +3,7 @@ let filterKind = 'all'; // 'all' | 'video' | 'image'
 let navStack = [];
 let currentNode = videos; // videos is the tree root node
 let viewerMode = 'fit'; // 'fit' | 'original'
+let hasDragged = false;
 
 function renderApp() {
   const appEl = document.getElementById('app');
@@ -157,6 +158,7 @@ function setViewerMode(mode) {
   scroll.addEventListener('mousedown', e => {
     if (viewerMode !== 'original') return;
     dragging = true;
+    hasDragged = false;
     startX = e.clientX;
     startY = e.clientY;
     scrollLeft = scroll.scrollLeft;
@@ -167,8 +169,11 @@ function setViewerMode(mode) {
 
   document.addEventListener('mousemove', e => {
     if (!dragging) return;
-    scroll.scrollLeft = scrollLeft - (e.clientX - startX);
-    scroll.scrollTop = scrollTop - (e.clientY - startY);
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) hasDragged = true;
+    scroll.scrollLeft = scrollLeft - dx;
+    scroll.scrollTop = scrollTop - dy;
   });
 
   document.addEventListener('mouseup', () => {
@@ -211,6 +216,7 @@ document.getElementById('btnOriginalSize').addEventListener('click', () => setVi
 document.getElementById('btnCloseViewer').addEventListener('click', closeImageViewer);
 
 document.getElementById('imageViewerScroll').addEventListener('click', e => {
+  if (hasDragged) { hasDragged = false; return; }
   if (e.target === e.currentTarget) closeImageViewer();
 });
 
