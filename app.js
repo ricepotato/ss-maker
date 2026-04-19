@@ -1,6 +1,8 @@
 let viewMode = 'grid';
+let filterKind = 'all'; // 'all' | 'video' | 'image'
 let navStack = [];
-let currentNode = videos; // videos is now the tree root node
+let currentNode = videos; // videos is the tree root node
+let viewerMode = 'fit'; // 'fit' | 'original'
 
 function renderApp() {
   const appEl = document.getElementById('app');
@@ -10,7 +12,11 @@ function renderApp() {
   ul.className = viewMode === 'grid' ? 'list-view grid-view' : 'list-view';
 
   const dirs = currentNode.children.filter(c => c.type === 'dir');
-  const files = currentNode.children.filter(c => c.type === 'file');
+  const files = currentNode.children.filter(c => {
+    if (c.type !== 'file') return false;
+    if (filterKind === 'all') return true;
+    return c.kind === filterKind;
+  });
 
   dirs.forEach(dir => {
     const li = document.createElement('li');
@@ -35,7 +41,12 @@ function renderApp() {
   files.forEach(file => {
     const li = document.createElement('li');
     li.className = 'list-item';
-    new ListItem({ target: li, initialState: file });
+    if (file.kind === 'image') {
+      li.classList.add('list-item--image');
+      new ImageItem({ target: li, initialState: file });
+    } else {
+      new ListItem({ target: li, initialState: file });
+    }
     ul.appendChild(li);
   });
 
@@ -72,6 +83,7 @@ function ListItem({ target, initialState }) {
         <div class="list-item__dirname">${this.state.dirname}</div>
         <div class="list-item__name">${this.state.name}</div>
         <div class="list-item__links">
+          <span class="kind-badge badge--video">동영상</span>
           <a target="_blank" href="potplayer://${this.state.target.replace(/\\/gi, "/")}">pot</a> |
           <a target="_blank" href="${this.state.target}">browser</a>
         </div>
@@ -84,6 +96,49 @@ function ListItem({ target, initialState }) {
     });
   };
   render();
+}
+
+function ImageItem({ target, initialState }) {
+  const render = () => {
+    target.innerHTML = `
+    <div class="list-item__container">
+      <div class="list-item__image_container">
+        <img src='${initialState.target}'/>
+      </div>
+      <div class="list-item__info">
+        <div class="list-item__dirname">${initialState.dirname}</div>
+        <div class="list-item__name">${initialState.name}</div>
+        <div class="list-item__links">
+          <span class="kind-badge badge--image">이미지</span>
+        </div>
+      </div>
+    </div>`;
+    const img = target.querySelector('img');
+    img.style.cursor = 'zoom-in';
+    img.addEventListener('click', () => openImageViewer(initialState.target));
+  };
+  render();
+}
+
+// Image viewer
+function openImageViewer(src) {
+  const viewer = document.getElementById('imageViewer');
+  document.getElementById('imageViewerImg').src = src;
+  viewer.classList.remove('hidden');
+  setViewerMode('fit');
+}
+
+function closeImageViewer() {
+  document.getElementById('imageViewer').classList.add('hidden');
+  document.getElementById('imageViewerImg').src = '';
+}
+
+function setViewerMode(mode) {
+  viewerMode = mode;
+  const scroll = document.getElementById('imageViewerScroll');
+  scroll.className = mode === 'fit' ? 'image-viewer__scroll fit-mode' : 'image-viewer__scroll original-mode';
+  document.getElementById('btnFitScreen').classList.toggle('active', mode === 'fit');
+  document.getElementById('btnOriginalSize').classList.toggle('active', mode === 'original');
 }
 
 // Initialize
@@ -103,4 +158,25 @@ document.getElementById('btnToggleView').addEventListener('click', () => {
   viewMode = viewMode === 'list' ? 'grid' : 'list';
   document.getElementById('btnToggleView').textContent = viewMode === 'list' ? 'Grid' : 'List';
   renderApp();
+});
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterKind = btn.dataset.kind;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderApp();
+  });
+});
+
+document.getElementById('btnFitScreen').addEventListener('click', () => setViewerMode('fit'));
+document.getElementById('btnOriginalSize').addEventListener('click', () => setViewerMode('original'));
+document.getElementById('btnCloseViewer').addEventListener('click', closeImageViewer);
+
+document.getElementById('imageViewerScroll').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeImageViewer();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeImageViewer();
 });

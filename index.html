@@ -141,6 +141,133 @@
             padding: 6px 8px;
         }
 
+        /* kind badge */
+        .kind-badge {
+            display: inline-block;
+            font-size: 11px;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-right: 4px;
+        }
+
+        .badge--video {
+            background: #e0e8ff;
+            color: #003399;
+        }
+
+        .badge--image {
+            background: #e0f0e0;
+            color: #006600;
+        }
+
+        /* filter buttons */
+        .filter-group {
+            display: flex;
+            gap: 4px;
+        }
+
+        .filter-btn {
+            padding: 3px 12px;
+            border: 1px solid #bbb;
+            border-radius: 4px;
+            background: #f0f0f0;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .filter-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .filter-btn.active {
+            background: #0066cc;
+            color: #fff;
+            border-color: #0066cc;
+        }
+
+        /* image viewer */
+        .image-viewer {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            background: rgba(0, 0, 0, 0.92);
+        }
+
+        .image-viewer.hidden {
+            display: none;
+        }
+
+        .image-viewer__controls {
+            flex-shrink: 0;
+            display: flex;
+            gap: 8px;
+            padding: 10px 16px;
+            background: rgba(0, 0, 0, 0.6);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-viewer__scroll {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
+        }
+
+        .image-viewer__scroll.fit-mode img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            display: block;
+        }
+
+        .image-viewer__scroll.original-mode {
+            align-items: flex-start;
+            justify-content: flex-start;
+        }
+
+        .image-viewer__scroll.original-mode img {
+            max-width: none;
+            max-height: none;
+            display: block;
+        }
+
+        .viewer-btn {
+            padding: 6px 18px;
+            border: 1px solid #888;
+            border-radius: 4px;
+            background: #333;
+            color: #fff;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .viewer-btn:hover {
+            background: #555;
+        }
+
+        .viewer-btn.active {
+            background: #0066cc;
+            border-color: #0066cc;
+        }
+
+        .viewer-btn.close-btn {
+            margin-left: 16px;
+            background: #882200;
+            border-color: #882200;
+        }
+
+        .viewer-btn.close-btn:hover {
+            background: #aa3300;
+        }
+
         /* folder item */
         li.list-item--dir {
             cursor: pointer;
@@ -210,6 +337,11 @@
         <div class="toolbar">
             <button id="btnBack" disabled>&#8593; 상위</button>
             <span id="breadcrumb"></span>
+            <div class="filter-group">
+                <button class="filter-btn active" data-kind="all">전체</button>
+                <button class="filter-btn" data-kind="video">동영상</button>
+                <button class="filter-btn" data-kind="image">이미지</button>
+            </div>
             <button id="btnToggleView">List</button>
         </div>
     </header>
@@ -217,6 +349,16 @@
         <div id="app">
         </div>    
     </main>
+    <div id="imageViewer" class="image-viewer hidden">
+        <div class="image-viewer__controls">
+            <button id="btnFitScreen" class="viewer-btn active">화면 맞춤</button>
+            <button id="btnOriginalSize" class="viewer-btn">원본 크기</button>
+            <button id="btnCloseViewer" class="viewer-btn close-btn">&#10005; 닫기</button>
+        </div>
+        <div id="imageViewerScroll" class="image-viewer__scroll fit-mode">
+            <img id="imageViewerImg" src="" alt="" />
+        </div>
+    </div>
     <footer></footer>
     <script src="snapshots.js"></script>
     <script src="app.js"></script>

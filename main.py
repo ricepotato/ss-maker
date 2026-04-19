@@ -22,6 +22,7 @@ log = logging.getLogger(f"app.{__name__}")
 
 CHUNK_SIZE = 1024 * 1024 * 10
 HASH_CACHE_FILENAME = ".hash_cache.json"
+IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'}
 
 
 class Target(pydantic.BaseModel):
@@ -122,12 +123,54 @@ class Snapshot:
     
     def to_dict(self):
         return {
+            "kind": "video",
             "name": self.target.stem,
             "target": self.target.as_posix(),
             "snapshots": self.snapshots,
             "sha256": self.sha256,
             "dirname": self.target.parent.name
         }
+
+class ImageFile:
+    def __init__(self, target: pathlib.Path):
+        self.target = target
+        self._sha256 = None
+        self._snapshot_path = self.target.parent / ".snapshots"
+        self._cache_entry: dict = None
+
+    @property
+    def sha256(self):
+        if self._sha256 is None:
+            self._sha256 = get_file_hash(self.target)
+        return self._sha256
+
+    def make(self):
+        os.makedirs(self._snapshot_path, exist_ok=True)
+        cache = load_hash_cache(self._snapshot_path)
+        key = self.target.name
+        stat = self.target.stat()
+        entry = cache.get(key)
+        cache_hit = (
+            entry is not None
+            and entry.get("size") == stat.st_size
+            and entry.get("mtime") == stat.st_mtime
+        )
+        if cache_hit:
+            self._sha256 = entry["sha256"]
+            log.info("cache hit (image): %s", self.target.name)
+        else:
+            self._cache_entry = {"size": stat.st_size, "mtime": stat.st_mtime, "sha256": self.sha256}
+        return self
+
+    def to_dict(self):
+        return {
+            "kind": "image",
+            "name": self.target.stem,
+            "target": self.target.as_posix(),
+            "sha256": self.sha256,
+            "dirname": self.target.parent.name
+        }
+
 
 def get_file_list(root_path: str, ext: str = None):
     return [os.path.join(root_path, item) for item in os.listdir(root_path)]
@@ -187,6 +230,21 @@ def process_snapshot(target: pathlib.Path) -> Snapshot:
 def copy_to_path(filename, dest_path):
     new_path = os.path.join(dest_path, filename)
     shutil.copyfile(filename, new_path)
+
+
+def find_image_files(root: pathlib.Path, recursive: bool = False) -> List[pathlib.Path]:
+    target = scan_dir(root)
+    image_files = [f for f in target.files if f.suffix.lower() in IMAGE_EXTENSIONS]
+
+    if not recursive:
+        return image_files
+
+    for dir_item in target.dirs:
+        if dir_item.name == ".snapshots":
+            continue
+        image_files.extend(find_image_files(dir_item, recursive=True))
+
+    return image_files
 
 
 def build_tree(snapshots: List[Snapshot], root: pathlib.Path) -> dict:
@@ -253,24 +311,28 @@ def main():
         log.warning("path not exists. %s", args.target)
         sys.exit(1)
 
-    files = find_mp4_files(args.target, recursive=args.recursive)
+    root_path = pathlib.Path(args.target)
+
+    # 동영상 처리 (병렬)
+    files = find_mp4_files(root_path, recursive=args.recursive)
     snapshot_list = [Snapshot(target) for target in files]
 
     results = []
     with ProcessPoolExecutor(max_workers=4) as executor:
-        futures = []
-        for snapshot in snapshot_list:
-            future = executor.submit(snapshot.make)
-            futures.append(future)
+        futures = [executor.submit(s.make) for s in snapshot_list]
+        for future in futures:
+            results.append(future.result())
 
-        futures_result = [future.result() for future in futures]
+    # 이미지 처리 (순차)
+    image_files = find_image_files(root_path, recursive=args.recursive)
+    image_results = [ImageFile(target).make() for target in image_files]
+    log.info("found %d image files", len(image_results))
 
-        for result in futures_result:
-            results.append(result)
+    all_results = results + image_results
 
     # 캐시 엔트리를 snapshot_path 기준으로 그룹핑해서 한 번에 저장
     cache_updates = defaultdict(dict)
-    for result in results:
+    for result in all_results:
         if result is not None and result._cache_entry is not None:
             cache_updates[result._snapshot_path][result.target.name] = result._cache_entry
 
@@ -279,7 +341,7 @@ def main():
         cache.update(entries)
         save_hash_cache(snapshot_path, cache)
 
-    dump_jsonfile(results, args.target, pathlib.Path(args.target))
+    dump_jsonfile(all_results, args.target, root_path)
 
 
 
