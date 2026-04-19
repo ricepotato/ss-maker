@@ -140,11 +140,76 @@
         ul.list-view.grid-view .list-item__info {
             padding: 6px 8px;
         }
+
+        /* folder item */
+        li.list-item--dir {
+            cursor: pointer;
+        }
+
+        li.list-item--dir .list-item__container {
+            gap: 10px;
+        }
+
+        li.list-item--dir:hover {
+            background: #e8f0fe;
+        }
+
+        .list-item__dir-icon {
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+
+        .list-item__dir-count {
+            color: #888;
+            font-size: 12px;
+            margin-left: 4px;
+        }
+
+        ul.list-view.grid-view li.list-item--dir {
+            display: flex;
+            align-items: center;
+        }
+
+        ul.list-view.grid-view li.list-item--dir .list-item__container {
+            flex-direction: row;
+            padding: 12px;
+            align-items: center;
+        }
+
+        /* breadcrumb */
+        #breadcrumb {
+            font-size: 13px;
+            color: #444;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #btnBack {
+            padding: 4px 14px;
+            cursor: pointer;
+            border: 1px solid #bbb;
+            border-radius: 4px;
+            background: #f0f0f0;
+            font-size: 13px;
+        }
+
+        #btnBack:hover:not(:disabled) {
+            background: #e0e0e0;
+        }
+
+        #btnBack:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
     </style>
 </head>
 <body>
     <header>
         <div class="toolbar">
+            <button id="btnBack" disabled>&#8593; 상위</button>
+            <span id="breadcrumb"></span>
             <button id="btnToggleView">List</button>
         </div>
     </header>

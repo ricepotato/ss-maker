@@ -189,14 +189,38 @@ def copy_to_path(filename, dest_path):
     shutil.copyfile(filename, new_path)
 
 
-def dump_jsonfile(snapshots: List[Snapshot], output_path):
-    ss_list = [snapshot.to_dict() for snapshot in snapshots if snapshot is not None]
-    json_str = json.dumps(ss_list, indent=4)
+def build_tree(snapshots: List[Snapshot], root: pathlib.Path) -> dict:
+    tree: dict = {"type": "dir", "name": root.name, "children": []}
+    for snapshot in snapshots:
+        if snapshot is None:
+            continue
+        try:
+            rel_path = snapshot.target.relative_to(root)
+        except ValueError:
+            rel_path = pathlib.Path(snapshot.target.name)
+        parts = rel_path.parts
+        node = tree
+        for part in parts[:-1]:
+            existing = next(
+                (c for c in node["children"] if c.get("type") == "dir" and c["name"] == part),
+                None,
+            )
+            if existing is None:
+                existing = {"type": "dir", "name": part, "children": []}
+                node["children"].append(existing)
+            node = existing
+        node["children"].append({"type": "file", **snapshot.to_dict()})
+    return tree
+
+
+def dump_jsonfile(snapshots: List[Snapshot], output_path, root_path: pathlib.Path):
+    tree = build_tree(snapshots, root_path)
+    json_str = json.dumps(tree, indent=4, ensure_ascii=False)
     json_filepath = os.path.join(output_path, "snapshots.json")
-    with open(json_filepath, "w") as f:
+    with open(json_filepath, "w", encoding="utf-8") as f:
         f.write(json_str)
     js_filepath = os.path.join(output_path, "snapshots.js")
-    with open(js_filepath, "w") as f:
+    with open(js_filepath, "w", encoding="utf-8") as f:
         f.write(f"const videos={json_str}")
 
     copy_to_path("index.html", output_path)
@@ -255,7 +279,7 @@ def main():
         cache.update(entries)
         save_hash_cache(snapshot_path, cache)
 
-    dump_jsonfile(results, args.target)
+    dump_jsonfile(results, args.target, pathlib.Path(args.target))
 
 
 
