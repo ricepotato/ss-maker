@@ -1,372 +1,373 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Viewer</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-        body {
-            background: #f5f5f5;
-            font-family: sans-serif;
-            font-size: 13px;
-            color: #222;
-        }
+      body {
+        background: #f5f5f5;
+        font-family: sans-serif;
+        font-size: 13px;
+        color: #222;
+      }
 
-        ul.list-view {
-            width: 100%;
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 1px;
-        }
+      ul.list-view {
+        width: 100%;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
 
-        li.list-item {
-            width: 100%;
-            background: #fff;
-        }
+      li.list-item {
+        width: 100%;
+        background: #fff;
+      }
 
-        li.list-item:hover {
-            background: #f0f0f0;
-        }
+      li.list-item:hover {
+        background: #f0f0f0;
+      }
 
-        .list-item__container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 6px 12px;
-        }
+      .list-item__container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 6px 12px;
+      }
 
-        .list-item__image_container img {
-            display: block;
-            width: 160px;
-            height: 90px;
-            object-fit: cover;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
+      .list-item__image_container img {
+        display: block;
+        width: 160px;
+        height: 90px;
+        object-fit: cover;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
 
-        .list-item__info {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            min-width: 0;
-        }
+      .list-item__info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+      }
 
-        .list-item__name {
-            font-weight: bold;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+      .list-item__name {
+        font-weight: bold;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
 
-        .list-item__dirname {
-            color: #666;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+      .list-item__dirname {
+        color: #666;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
 
-        .list-item__links a {
-            color: #0066cc;
-            text-decoration: none;
-        }
+      .list-item__links a {
+        color: #0066cc;
+        text-decoration: none;
+      }
 
-        .list-item__links a:hover {
-            text-decoration: underline;
-        }
+      .list-item__links a:hover {
+        text-decoration: underline;
+      }
 
-        /* toolbar */
-        header {
-            position: sticky;
-            top: 0;
-            background: #fff;
-            border-bottom: 1px solid #ddd;
-            z-index: 10;
-            padding: 6px 12px;
-        }
+      /* toolbar */
+      header {
+        position: sticky;
+        top: 0;
+        background: #fff;
+        border-bottom: 1px solid #ddd;
+        z-index: 10;
+        padding: 6px 12px;
+      }
 
-        .toolbar {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
 
-        #btnToggleView {
-            padding: 4px 14px;
-            cursor: pointer;
-            border: 1px solid #bbb;
-            border-radius: 4px;
-            background: #f0f0f0;
-            font-size: 13px;
-        }
+      #btnToggleView {
+        padding: 4px 14px;
+        cursor: pointer;
+        border: 1px solid #bbb;
+        border-radius: 4px;
+        background: #f0f0f0;
+        font-size: 13px;
+      }
 
-        #btnToggleView:hover {
-            background: #e0e0e0;
-        }
+      #btnToggleView:hover {
+        background: #e0e0e0;
+      }
 
-        /* grid mode */
-        ul.list-view.grid-view {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 8px;
-            padding: 8px;
-        }
+      /* grid mode */
+      ul.list-view.grid-view {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        gap: 8px;
+        padding: 8px;
+      }
 
-        ul.list-view.grid-view li.list-item {
-            border-radius: 4px;
-            overflow: hidden;
-            border: 1px solid #e0e0e0;
-        }
+      ul.list-view.grid-view li.list-item {
+        border-radius: 4px;
+        overflow: hidden;
+        border: 1px solid #e0e0e0;
+      }
 
-        ul.list-view.grid-view .list-item__container {
-            flex-direction: column;
-            padding: 0;
-            gap: 0;
-            align-items: stretch;
-        }
+      ul.list-view.grid-view .list-item__container {
+        flex-direction: column;
+        padding: 0;
+        gap: 0;
+        align-items: stretch;
+      }
 
-        ul.list-view.grid-view .list-item__image_container img {
-            width: 100%;
-            height: 120px;
-        }
+      ul.list-view.grid-view .list-item__image_container img {
+        width: 100%;
+        height: 120px;
+      }
 
-        ul.list-view.grid-view .list-item__info {
-            padding: 6px 8px;
-        }
+      ul.list-view.grid-view .list-item__info {
+        padding: 6px 8px;
+      }
 
-        /* kind badge */
-        .kind-badge {
-            display: inline-block;
-            font-size: 11px;
-            padding: 1px 6px;
-            border-radius: 3px;
-            font-weight: bold;
-            margin-right: 4px;
-        }
+      /* kind badge */
+      .kind-badge {
+        display: inline-block;
+        font-size: 11px;
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-weight: bold;
+        margin-right: 4px;
+      }
 
-        .badge--video {
-            background: #e0e8ff;
-            color: #003399;
-        }
+      .badge--video {
+        background: #e0e8ff;
+        color: #003399;
+      }
 
-        .badge--image {
-            background: #e0f0e0;
-            color: #006600;
-        }
+      .badge--image {
+        background: #e0f0e0;
+        color: #006600;
+      }
 
-        /* filter buttons */
-        .filter-group {
-            display: flex;
-            gap: 4px;
-        }
+      /* filter buttons */
+      .filter-group {
+        display: flex;
+        gap: 4px;
+      }
 
-        .filter-btn {
-            padding: 3px 12px;
-            border: 1px solid #bbb;
-            border-radius: 4px;
-            background: #f0f0f0;
-            cursor: pointer;
-            font-size: 12px;
-        }
+      .filter-btn {
+        padding: 3px 12px;
+        border: 1px solid #bbb;
+        border-radius: 4px;
+        background: #f0f0f0;
+        cursor: pointer;
+        font-size: 12px;
+      }
 
-        .filter-btn:hover {
-            background: #e0e0e0;
-        }
+      .filter-btn:hover {
+        background: #e0e0e0;
+      }
 
-        .filter-btn.active {
-            background: #0066cc;
-            color: #fff;
-            border-color: #0066cc;
-        }
+      .filter-btn.active {
+        background: #0066cc;
+        color: #fff;
+        border-color: #0066cc;
+      }
 
-        /* image viewer */
-        .image-viewer {
-            position: fixed;
-            inset: 0;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            background: rgba(0, 0, 0, 0.92);
-        }
+      /* image viewer */
+      .image-viewer {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        background: rgba(0, 0, 0, 0.92);
+      }
 
-        .image-viewer.hidden {
-            display: none;
-        }
+      .image-viewer.hidden {
+        display: none;
+      }
 
-        .image-viewer__controls {
-            flex-shrink: 0;
-            display: flex;
-            gap: 8px;
-            padding: 10px 16px;
-            background: rgba(0, 0, 0, 0.6);
-            align-items: center;
-            justify-content: center;
-        }
+      .image-viewer__controls {
+        flex-shrink: 0;
+        display: flex;
+        gap: 8px;
+        padding: 10px 16px;
+        background: rgba(0, 0, 0, 0.6);
+        align-items: center;
+        justify-content: center;
+      }
 
-        .image-viewer__scroll {
-            flex: 1;
-            overflow: auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 0;
-        }
+      .image-viewer__scroll {
+        flex: 1;
+        overflow: auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 0;
+      }
 
-        .image-viewer__scroll.fit-mode img {
-            max-width: 100%;
-            max-height: 100%;
-            width: auto;
-            height: auto;
-            object-fit: contain;
-            display: block;
-        }
+      .image-viewer__scroll.fit-mode img {
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        display: block;
+      }
 
-        .image-viewer__scroll.original-mode {
-            cursor: grab;
-            user-select: none;
-        }
+      .image-viewer__scroll.original-mode {
+        cursor: grab;
+        user-select: none;
+      }
 
-        .image-viewer__scroll.original-mode.is-dragging {
-            cursor: grabbing;
-        }
+      .image-viewer__scroll.original-mode.is-dragging {
+        cursor: grabbing;
+      }
 
-        .image-viewer__scroll.original-mode img {
-            max-width: none;
-            max-height: none;
-            display: block;
-            margin: auto;
-            pointer-events: none;
-        }
+      .image-viewer__scroll.original-mode img {
+        max-width: none;
+        max-height: none;
+        display: block;
+        margin: auto;
+        pointer-events: none;
+      }
 
-        .viewer-btn {
-            padding: 6px 18px;
-            border: 1px solid #888;
-            border-radius: 4px;
-            background: #333;
-            color: #fff;
-            cursor: pointer;
-            font-size: 13px;
-        }
+      .viewer-btn {
+        padding: 6px 18px;
+        border: 1px solid #888;
+        border-radius: 4px;
+        background: #333;
+        color: #fff;
+        cursor: pointer;
+        font-size: 13px;
+      }
 
-        .viewer-btn:hover {
-            background: #555;
-        }
+      .viewer-btn:hover {
+        background: #555;
+      }
 
-        .viewer-btn.active {
-            background: #0066cc;
-            border-color: #0066cc;
-        }
+      .viewer-btn.active {
+        background: #0066cc;
+        border-color: #0066cc;
+      }
 
-        .viewer-btn.close-btn {
-            margin-left: 16px;
-            background: #882200;
-            border-color: #882200;
-        }
+      .viewer-btn.close-btn {
+        margin-left: 16px;
+        background: #882200;
+        border-color: #882200;
+      }
 
-        .viewer-btn.close-btn:hover {
-            background: #aa3300;
-        }
+      .viewer-btn.close-btn:hover {
+        background: #aa3300;
+      }
 
-        /* folder item */
-        li.list-item--dir {
-            cursor: pointer;
-        }
+      /* folder item */
+      li.list-item--dir {
+        cursor: pointer;
+      }
 
-        li.list-item--dir .list-item__container {
-            gap: 10px;
-        }
+      li.list-item--dir .list-item__container {
+        gap: 10px;
+      }
 
-        li.list-item--dir:hover {
-            background: #e8f0fe;
-        }
+      li.list-item--dir:hover {
+        background: #e8f0fe;
+      }
 
-        .list-item__dir-icon {
-            font-size: 28px;
-            flex-shrink: 0;
-        }
+      .list-item__dir-icon {
+        font-size: 28px;
+        flex-shrink: 0;
+      }
 
-        .list-item__dir-count {
-            color: #888;
-            font-size: 12px;
-            margin-left: 4px;
-        }
+      .list-item__dir-count {
+        color: #888;
+        font-size: 12px;
+        margin-left: 4px;
+      }
 
-        ul.list-view.grid-view li.list-item--dir {
-            display: flex;
-            align-items: center;
-        }
+      ul.list-view.grid-view li.list-item--dir {
+        display: flex;
+        align-items: center;
+      }
 
-        ul.list-view.grid-view li.list-item--dir .list-item__container {
-            flex-direction: row;
-            padding: 12px;
-            align-items: center;
-        }
+      ul.list-view.grid-view li.list-item--dir .list-item__container {
+        flex-direction: row;
+        padding: 12px;
+        align-items: center;
+      }
 
-        /* breadcrumb */
-        #breadcrumb {
-            font-size: 13px;
-            color: #444;
-            flex: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+      /* breadcrumb */
+      #breadcrumb {
+        font-size: 13px;
+        color: #444;
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
 
-        #btnBack {
-            padding: 4px 14px;
-            cursor: pointer;
-            border: 1px solid #bbb;
-            border-radius: 4px;
-            background: #f0f0f0;
-            font-size: 13px;
-        }
+      #btnBack {
+        padding: 4px 14px;
+        cursor: pointer;
+        border: 1px solid #bbb;
+        border-radius: 4px;
+        background: #f0f0f0;
+        font-size: 13px;
+      }
 
-        #btnBack:hover:not(:disabled) {
-            background: #e0e0e0;
-        }
+      #btnBack:hover:not(:disabled) {
+        background: #e0e0e0;
+      }
 
-        #btnBack:disabled {
-            opacity: 0.4;
-            cursor: default;
-        }
+      #btnBack:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <header>
-        <div class="toolbar">
-            <button id="btnBack" disabled>&#8593; 상위</button>
-            <span id="breadcrumb"></span>
-            <div class="filter-group">
-                <button class="filter-btn active" data-kind="all">전체</button>
-                <button class="filter-btn" data-kind="video">동영상</button>
-                <button class="filter-btn" data-kind="image">이미지</button>
-            </div>
-            <button id="btnToggleView">List</button>
+      <div class="toolbar">
+        <button id="btnBack" disabled>&#8593; 상위</button>
+        <span id="breadcrumb"></span>
+        <div class="filter-group">
+          <button class="filter-btn active" data-kind="all">전체</button>
+          <button class="filter-btn" data-kind="video">동영상</button>
+          <button class="filter-btn" data-kind="image">이미지</button>
         </div>
+        <button id="btnToggleView">List</button>
+      </div>
     </header>
     <main>
-        <div id="app">
-        </div>    
+      <div id="app"></div>
     </main>
     <div id="imageViewer" class="image-viewer hidden">
-        <div class="image-viewer__controls">
-            <button id="btnFitScreen" class="viewer-btn active">화면 맞춤</button>
-            <button id="btnOriginalSize" class="viewer-btn">원본 크기</button>
-            <button id="btnCloseViewer" class="viewer-btn close-btn">&#10005; 닫기</button>
-        </div>
-        <div id="imageViewerScroll" class="image-viewer__scroll fit-mode">
-            <img id="imageViewerImg" src="" alt="" />
-        </div>
+      <div class="image-viewer__controls">
+        <button id="btnFitScreen" class="viewer-btn active">화면 맞춤</button>
+        <button id="btnOriginalSize" class="viewer-btn">원본 크기</button>
+        <button id="btnCloseViewer" class="viewer-btn close-btn">
+          &#10005; 닫기
+        </button>
+      </div>
+      <div id="imageViewerScroll" class="image-viewer__scroll fit-mode">
+        <img id="imageViewerImg" src="" alt="" />
+      </div>
     </div>
     <footer></footer>
     <script src="snapshots.js"></script>
     <script src="app.js"></script>
-</body>
+  </body>
 </html>
