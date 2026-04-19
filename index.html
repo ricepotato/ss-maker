@@ -231,12 +231,19 @@
         .image-viewer__scroll.original-mode {
             align-items: flex-start;
             justify-content: flex-start;
+            cursor: grab;
+            user-select: none;
+        }
+
+        .image-viewer__scroll.original-mode.is-dragging {
+            cursor: grabbing;
         }
 
         .image-viewer__scroll.original-mode img {
             max-width: none;
             max-height: none;
             display: block;
+            pointer-events: none;
         }
 
         .viewer-btn {

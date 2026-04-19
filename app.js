@@ -140,7 +140,43 @@ function setViewerMode(mode) {
   scroll.className = mode === 'fit' ? 'image-viewer__scroll fit-mode' : 'image-viewer__scroll original-mode';
   document.getElementById('btnFitScreen').classList.toggle('active', mode === 'fit');
   document.getElementById('btnOriginalSize').classList.toggle('active', mode === 'original');
+  if (mode === 'original') {
+    requestAnimationFrame(() => {
+      scroll.scrollLeft = (scroll.scrollWidth - scroll.clientWidth) / 2;
+      scroll.scrollTop = (scroll.scrollHeight - scroll.clientHeight) / 2;
+    });
+  }
 }
+
+// 원본 크기 모드 드래그 패닝
+(function () {
+  let dragging = false;
+  let startX, startY, scrollLeft, scrollTop;
+  const scroll = document.getElementById('imageViewerScroll');
+
+  scroll.addEventListener('mousedown', e => {
+    if (viewerMode !== 'original') return;
+    dragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    scrollLeft = scroll.scrollLeft;
+    scrollTop = scroll.scrollTop;
+    scroll.classList.add('is-dragging');
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    scroll.scrollLeft = scrollLeft - (e.clientX - startX);
+    scroll.scrollTop = scrollTop - (e.clientY - startY);
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    scroll.classList.remove('is-dragging');
+  });
+})();
 
 // Initialize
 updateNav();
