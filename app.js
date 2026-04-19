@@ -30,11 +30,7 @@ function renderApp() {
         <span class="list-item__dir-count">${count}개 파일</span>
       </div>`;
     li.addEventListener('click', () => {
-      navStack.push(currentNode);
-      currentNode = dir;
-      updateNav();
-      renderApp();
-      window.scrollTo(0, 0);
+      navigateTo(dir, [...navStack, currentNode]);
     });
     ul.appendChild(li);
   });
@@ -69,6 +65,37 @@ function updateNav() {
   btnBack.disabled = navStack.length === 0;
   const parts = navStack.map(n => n.name).concat(currentNode.name);
   breadcrumb.textContent = parts.join(' / ');
+}
+
+function getNodePath(node, stack) {
+  return [...stack.map(n => n.name), node.name].map(encodeURIComponent).join('/');
+}
+
+function findNodeByPath(pathStr) {
+  if (!pathStr) return { node: videos, stack: [] };
+  const parts = pathStr.split('/').map(s => decodeURIComponent(s));
+  if (parts[0] !== videos.name) return null;
+  let node = videos;
+  const stack = [];
+  for (let i = 1; i < parts.length; i++) {
+    const next = node.children.find(c => c.type === 'dir' && c.name === parts[i]);
+    if (!next) return null;
+    stack.push(node);
+    node = next;
+  }
+  return { node, stack };
+}
+
+function navigateTo(node, stack, addHistory = true) {
+  navStack = stack;
+  currentNode = node;
+  if (addHistory) {
+    const path = getNodePath(node, stack);
+    history.pushState({ path }, '', '#' + path);
+  }
+  updateNav();
+  renderApp();
+  window.scrollTo(0, 0);
 }
 
 function ListItem({ target, initialState }) {
@@ -183,16 +210,34 @@ function setViewerMode(mode) {
   });
 })();
 
-// Initialize
-updateNav();
-renderApp();
+// Initialize: restore from hash or set root state
+(function () {
+  const hash = location.hash.slice(1);
+  if (hash) {
+    const result = findNodeByPath(hash);
+    if (result) {
+      navStack = result.stack;
+      currentNode = result.node;
+    }
+  }
+  history.replaceState({ path: getNodePath(currentNode, navStack) }, '', location.hash || '#' + getNodePath(videos, []));
+  updateNav();
+  renderApp();
+})();
+
+window.addEventListener('popstate', e => {
+  const path = e.state && e.state.path ? e.state.path : '';
+  const result = findNodeByPath(path) || { node: videos, stack: [] };
+  navStack = result.stack;
+  currentNode = result.node;
+  updateNav();
+  renderApp();
+  window.scrollTo(0, 0);
+});
 
 document.getElementById('btnBack').addEventListener('click', () => {
   if (navStack.length > 0) {
-    currentNode = navStack.pop();
-    updateNav();
-    renderApp();
-    window.scrollTo(0, 0);
+    navigateTo(navStack[navStack.length - 1], navStack.slice(0, -1));
   }
 });
 
