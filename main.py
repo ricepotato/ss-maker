@@ -11,7 +11,7 @@ import sys
 import pathlib
 import pydantic
 from typing import Generator, List
-from snapshot import make_snapshot
+from snapshot import make_snapshot, make_thumbnail
 from concurrent.futures import ProcessPoolExecutor
 
 
@@ -137,6 +137,7 @@ class ImageFile:
         self._sha256 = None
         self._snapshot_path = self.target.parent / ".snapshots"
         self._cache_entry: dict = None
+        self._thumbnail_path: str = None
 
     @property
     def sha256(self):
@@ -160,6 +161,13 @@ class ImageFile:
             log.info("cache hit (image): %s", self.target.name)
         else:
             self._cache_entry = {"size": stat.st_size, "mtime": stat.st_mtime, "sha256": self.sha256}
+
+        thumb_dir = self._snapshot_path / self.sha256
+        os.makedirs(thumb_dir, exist_ok=True)
+        thumb_path = thumb_dir / "thumb.jpg"
+        if not thumb_path.exists():
+            make_thumbnail(str(self.target), str(thumb_path), width=250)
+        self._thumbnail_path = thumb_path.as_posix()
         return self
 
     def to_dict(self):
@@ -167,6 +175,7 @@ class ImageFile:
             "kind": "image",
             "name": self.target.stem,
             "target": self.target.as_posix(),
+            "thumbnail": self._thumbnail_path,
             "sha256": self.sha256,
             "dirname": self.target.parent.name
         }
@@ -323,9 +332,14 @@ def main():
         for future in futures:
             results.append(future.result())
 
-    # 이미지 처리 (순차)
+    # 이미지 처리 (병렬)
     image_files = find_image_files(root_path, recursive=args.recursive)
-    image_results = [ImageFile(target).make() for target in image_files]
+    image_items = [ImageFile(target) for target in image_files]
+    image_results = []
+    with ProcessPoolExecutor(max_workers=4) as executor:
+        futures = [executor.submit(item.make) for item in image_items]
+        for future in futures:
+            image_results.append(future.result())
     log.info("found %d image files", len(image_results))
 
     all_results = results + image_results

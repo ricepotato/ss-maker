@@ -5,7 +5,8 @@
       "PowerShell($env:HOME = \"C:\\\\Users\\\\ricepotato\"; Set-Location \"C:\\\\Users\\\\ricepotato\\\\dev\\\\ss-maker\"; git status)",
       "PowerShell($env:HOME = \"C:\\\\Users\\\\ricepotato\"; Set-Location \"C:\\\\Users\\\\ricepotato\\\\dev\\\\ss-maker\"; git diff app.js index.html main.py)",
       "PowerShell(git add *)",
-      "PowerShell($env:HOME = \"C:\\\\Users\\\\ricepotato\"; Set-Location \"C:\\\\Users\\\\ricepotato\\\\dev\\\\ss-maker\"; git log --oneline -5)"
+      "PowerShell($env:HOME = \"C:\\\\Users\\\\ricepotato\"; Set-Location \"C:\\\\Users\\\\ricepotato\\\\dev\\\\ss-maker\"; git log --oneline -5)",
+      "PowerShell($env:HOME = \"C:\\\\Users\\\\ricepotato\"; Set-Location \"C:\\\\Users\\\\ricepotato\\\\dev\\\\ss-maker\"; git diff --stat)"
     ]
   }
 }

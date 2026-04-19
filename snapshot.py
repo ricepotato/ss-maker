@@ -4,6 +4,7 @@ import shutil
 import tempfile
 from typing import List
 import cv2  # pip install opencv-python
+import numpy as np
 
 # sudo apt-get install libcblas-dev libhdf5-dev libhdf5-serial-dev libatlas-base-dev libjasper-dev libqtgui4 libqt4-test
 
@@ -17,6 +18,21 @@ def make_tmp_jpg_file():
     new_tmpfilepath = f"{tmp_filepath}.jpg"
     shutil.move(tmp_filepath, new_tmpfilepath)
     return new_tmpfilepath
+
+
+def make_thumbnail(src_path: str, out_path: str, width: int = 250):
+    # cv2.imread는 Windows에서 비ASCII(한글 등) 경로를 처리하지 못하므로 imdecode 사용
+    buf = np.fromfile(src_path, dtype=np.uint8)
+    img = cv2.imdecode(buf, cv2.IMREAD_COLOR)
+    if img is None:
+        log.warning("cannot read image: %s", src_path)
+        return
+    h, w = img.shape[:2]
+    ratio = width / w
+    dst = cv2.resize(img, dsize=(0, 0), fx=ratio, fy=ratio, interpolation=cv2.INTER_AREA)
+    tmp_filepath = make_tmp_jpg_file()
+    cv2.imwrite(tmp_filepath, dst)
+    shutil.move(tmp_filepath, out_path)
 
 
 def make_snapshot(

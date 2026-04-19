@@ -100,10 +100,11 @@ function ListItem({ target, initialState }) {
 
 function ImageItem({ target, initialState }) {
   const render = () => {
+    const thumbSrc = initialState.thumbnail || initialState.target;
     target.innerHTML = `
     <div class="list-item__container">
       <div class="list-item__image_container">
-        <img src='${initialState.target}'/>
+        <img src='${thumbSrc}'/>
       </div>
       <div class="list-item__info">
         <div class="list-item__dirname">${initialState.dirname}</div>
