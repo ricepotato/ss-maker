@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MGA</title>
+    <style>
+      * {
+        padding: 0;
+        border: 0;
+        margin: 0;
+      }
+      #screen {
+        position: relative;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: black;
+        overflow-y: hidden;
+        cursor: pointer;
+      }
+      img.img-main {
+        max-height: 100%;
+        max-width: 100%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+      }
+      div.page-num {
+        position: absolute;
+        top: 0;
+        left: 0;
+        padding: 10px;
+        height: 20px;
+        width: 60px;
+        background-color: white;
+        color: black;
+        font-size: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      #btnGrid {
+        position: absolute;
+        bottom: 16px;
+        right: 16px;
+        width: 50px;
+        height: 50px;
+        background-color: rgba(80, 80, 80, 0.85);
+        color: white;
+        font-size: 22px;
+        cursor: pointer;
+        border-radius: 6px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      /* Full-screen grid overlay */
+      #grid-overlay {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.92);
+        z-index: 100;
+        display: none;
+        flex-direction: column;
+        overflow-y: scroll;
+      }
+      #grid-overlay.open {
+        display: flex;
+      }
+      #grid-header {
+        height: 50px;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+        padding: 0 16px;
+        flex-shrink: 0;
+      }
+
+      /* Folder toggle switch */
+      #folder-toggle-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #ccc;
+        font-size: 13px;
+        font-family: sans-serif;
+        cursor: pointer;
+        user-select: none;
+      }
+      .toggle-switch {
+        position: relative;
+        width: 36px;
+        height: 20px;
+        flex-shrink: 0;
+      }
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .toggle-track {
+        position: absolute;
+        inset: 0;
+        background-color: #555;
+        border-radius: 20px;
+        transition: background-color 0.2s;
+        cursor: pointer;
+      }
+      .toggle-track::after {
+        content: "";
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        left: 3px;
+        top: 3px;
+        background-color: white;
+        border-radius: 50%;
+        transition: transform 0.2s;
+      }
+      .toggle-switch input:checked + .toggle-track {
+        background-color: #4a9eff;
+      }
+      .toggle-switch input:checked + .toggle-track::after {
+        transform: translateX(16px);
+      }
+
+      #btnCloseGrid {
+        width: 44px;
+        height: 44px;
+        background-color: rgba(80, 80, 80, 0.85);
+        color: white;
+        font-size: 22px;
+        cursor: pointer;
+        border-radius: 6px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      #grid-list {
+        flex: 1;
+        padding: 8px 12px 12px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(var(--grid-item-size, 180px), 1fr));
+        gap: 6px;
+        align-content: start;
+      }
+      #grid-list .grid-item {
+        aspect-ratio: 1;
+        overflow: hidden;
+        cursor: pointer;
+        border: 3px solid transparent;
+        border-radius: 4px;
+        transition: border-color 0.2s ease;
+      }
+      #grid-list .grid-item.active {
+        border-color: #ffffff;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+      }
+      #grid-list .grid-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      /* Folder item */
+      #grid-list .folder-item {
+        aspect-ratio: 1;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        background-color: rgba(255, 255, 255, 0.07);
+        border: 3px solid rgba(255, 255, 255, 0.15);
+        border-radius: 4px;
+        text-decoration: none;
+        transition: border-color 0.2s;
+      }
+      #grid-list .folder-item:hover {
+        border-color: rgba(255, 255, 255, 0.5);
+      }
+      #grid-list .folder-item .folder-icon {
+        font-size: 48px;
+        line-height: 1;
+      }
+      #grid-list .folder-item .folder-name {
+        color: #ddd;
+        font-size: 13px;
+        font-family: sans-serif;
+        text-align: center;
+        word-break: break-all;
+        padding: 0 6px;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      /* Mosaic thumbnail grid inside folder item */
+      #grid-list .folder-item.has-mosaic {
+        background-color: #111;
+      }
+      .folder-mosaic {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2px;
+      }
+      .folder-mosaic img,
+      .folder-mosaic .mosaic-empty {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .folder-mosaic .mosaic-empty {
+        background-color: #2a2a2a;
+      }
+      #grid-list .folder-item.has-mosaic .folder-name {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        color: #fff;
+        font-size: 12px;
+        font-family: sans-serif;
+        text-align: center;
+        padding: 6px 6px 4px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.92));
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        word-break: normal;
+        z-index: 1;
+      }
+      #grid-list .folder-item.hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="screen">
+      <img id="mainImg" class="img-main" />
+      <div class="page-num"><span id="pageNum">1</span></div>
+      <button id="btnGrid" title="그리드 보기">⊞</button>
+    </div>
+
+    <!-- Full-screen grid overlay -->
+    <div id="grid-overlay">
+      <div id="grid-header">
+        <label id="folder-toggle-label">
+          <span class="toggle-switch">
+            <input type="checkbox" id="showFolders" checked />
+            <span class="toggle-track"></span>
+          </span>
+          폴더 보기
+        </label>
+        <button id="btnCloseGrid" title="닫기">✕</button>
+      </div>
+      <ul id="grid-list"></ul>
+    </div>
+
+    <script src="files.js"></script>
+    <script>
+      let index = 0;
+      const total = files.length;
+      const folderList = typeof folders !== "undefined" ? folders : [];
+
+      const GRID_SIZE_MIN = 80;
+      const GRID_SIZE_MAX = 400;
+      const GRID_SIZE_STEP = 30;
+      let gridItemSize = 180;
+
+      function setGridSize(size) {
+        gridItemSize = Math.min(GRID_SIZE_MAX, Math.max(GRID_SIZE_MIN, size));
+        document.getElementById("grid-list").style.setProperty("--grid-item-size", gridItemSize + "px");
+      }
+
+      function init() {
+        if (total > 0) {
+          window.onkeydown = (e) => {
+            if (e.key === "PageDown") {
+              index = Math.min(index + 1, total - 1);
+              render();
+            } else if (e.key === "PageUp") {
+              index = Math.max(index - 1, 0);
+              render();
+            } else if (e.key === "Home") {
+              index = 0;
+              render();
+            } else if (e.key === "End") {
+              index = total - 1;
+              render();
+            } else if (e.key === "Escape") {
+              closeGrid();
+            } else if (e.key === "+" || e.key === "=") {
+              if (document.getElementById("grid-overlay").classList.contains("open"))
+                setGridSize(gridItemSize + GRID_SIZE_STEP);
+            } else if (e.key === "-") {
+              if (document.getElementById("grid-overlay").classList.contains("open"))
+                setGridSize(gridItemSize - GRID_SIZE_STEP);
+            }
+          };
+          render();
+        } else {
+          document.querySelector(".page-num").style.display = "none";
+          window.onkeydown = (e) => {
+            if (e.key === "+" || e.key === "=") {
+              setGridSize(gridItemSize + GRID_SIZE_STEP);
+            } else if (e.key === "-") {
+              setGridSize(gridItemSize - GRID_SIZE_STEP);
+            }
+          };
+          openGrid();
+        }
+
+        renderGrid();
+
+        document.getElementById("btnGrid").addEventListener("click", openGrid);
+        document
+          .getElementById("btnCloseGrid")
+          .addEventListener("click", closeGrid);
+        document
+          .getElementById("showFolders")
+          .addEventListener("change", (e) => {
+            applyFolderVisibility(e.target.checked);
+          });
+
+        let clickTimer = null;
+        const screen = document.getElementById("screen");
+
+        screen.addEventListener("click", (e) => {
+          if (e.target.closest("#btnGrid")) return;
+          if (total === 0) return;
+          if (clickTimer !== null) return;
+          const x = e.clientX;
+          clickTimer = setTimeout(() => {
+            clickTimer = null;
+            if (x < window.innerWidth / 2) {
+              index = Math.max(index - 1, 0);
+            } else {
+              index = Math.min(index + 1, total - 1);
+            }
+            render();
+          }, 220);
+        });
+
+        screen.addEventListener("dblclick", (e) => {
+          if (e.target.closest("#btnGrid")) return;
+          if (clickTimer !== null) {
+            clearTimeout(clickTimer);
+            clickTimer = null;
+          }
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+          } else {
+            document.exitFullscreen();
+          }
+        });
+      }
+
+      function render() {
+        if (total === 0) return;
+        document.getElementById("pageNum").innerText = `${index + 1}/${total}`;
+        document.getElementById("mainImg").src = files[index].resized;
+
+        document
+          .querySelectorAll("#grid-list .grid-item")
+          .forEach((item, i) => {
+            item.classList.toggle("active", i === index);
+          });
+      }
+
+      function renderGrid() {
+        const gridList = document.getElementById("grid-list");
+
+        // Folders first
+        folderList.forEach((folder) => {
+          const name = typeof folder === "string" ? folder : folder.name;
+          const thumbnails = typeof folder === "string" ? [] : (folder.thumbnails || []);
+
+          const a = document.createElement("a");
+          a.className = "folder-item";
+          a.href = `${name}/gallery.html`;
+          a.dataset.folder = name;
+
+          if (thumbnails.length > 0) {
+            a.classList.add("has-mosaic");
+            const mosaic = document.createElement("div");
+            mosaic.className = "folder-mosaic";
+            for (let i = 0; i < 4; i++) {
+              if (i < thumbnails.length) {
+                const img = new Image();
+                img.src = thumbnails[i];
+                mosaic.appendChild(img);
+              } else {
+                const empty = document.createElement("div");
+                empty.className = "mosaic-empty";
+                mosaic.appendChild(empty);
+              }
+            }
+            a.appendChild(mosaic);
+          } else {
+            const icon = document.createElement("span");
+            icon.className = "folder-icon";
+            icon.textContent = "📁";
+            a.appendChild(icon);
+          }
+
+          const label = document.createElement("span");
+          label.className = "folder-name";
+          label.textContent = name;
+
+          a.appendChild(label);
+          gridList.appendChild(a);
+        });
+
+        // Image thumbnails
+        files.forEach((file, i) => {
+          const li = document.createElement("li");
+          li.className = "grid-item";
+
+          const img = new Image();
+          img.src = file.thumbnail;
+          img.alt = file.original;
+
+          li.appendChild(img);
+          li.addEventListener("click", () => {
+            index = i;
+            render();
+            closeGrid();
+          });
+
+          gridList.appendChild(li);
+        });
+      }
+
+      function applyFolderVisibility(visible) {
+        document.querySelectorAll("#grid-list .folder-item").forEach((el) => {
+          el.classList.toggle("hidden", !visible);
+        });
+      }
+
+      function openGrid() {
+        document.getElementById("grid-overlay").classList.add("open");
+        const active = document.querySelector("#grid-list .grid-item.active");
+        if (active) active.scrollIntoView({ block: "center" });
+      }
+
+      function closeGrid() {
+        document.getElementById("grid-overlay").classList.remove("open");
+      }
+
+      init();
+    </script>
+  </body>
+</html>

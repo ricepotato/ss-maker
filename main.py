@@ -1,19 +1,18 @@
-from dataclasses import dataclass
+import argparse
 import hashlib
-import os
 import json
 import logging
-import multiprocessing
-from collections import defaultdict
-import shutil
-import argparse
-import sys
+import os
 import pathlib
-import pydantic
-from typing import Generator, List
-from snapshot import make_snapshot, make_thumbnail
+import shutil
+import sys
+from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
+from typing import Generator, List
 
+import pydantic
+
+from snapshot import make_snapshot, make_thumbnail
 
 log = logging.getLogger("app")
 log.addHandler(logging.StreamHandler())
@@ -146,7 +145,8 @@ class ImageFile:
         return self._sha256
 
     def make(self):
-        os.makedirs(self._snapshot_path, exist_ok=True)
+        if not os.path.exists(self._snapshot_path):
+            os.makedirs(self._snapshot_path, exist_ok=True)
         cache = load_hash_cache(self._snapshot_path)
         key = self.target.name
         stat = self.target.stat()
@@ -333,16 +333,16 @@ def main():
             results.append(future.result())
 
     # 이미지 처리 (병렬)
-    image_files = find_image_files(root_path, recursive=args.recursive)
-    image_items = [ImageFile(target) for target in image_files]
-    image_results = []
-    with ProcessPoolExecutor(max_workers=4) as executor:
-        futures = [executor.submit(item.make) for item in image_items]
-        for future in futures:
-            image_results.append(future.result())
-    log.info("found %d image files", len(image_results))
+    # image_files = find_image_files(root_path, recursive=args.recursive)
+    # image_items = [ImageFile(target) for target in image_files]
+    # image_results = []
+    # with ProcessPoolExecutor(max_workers=4) as executor:
+    #     futures = [executor.submit(item.make) for item in image_items]
+    #     for future in futures:
+    #         image_results.append(future.result())
+    # log.info("found %d image files", len(image_results))
 
-    all_results = results + image_results
+    all_results = results
 
     # 캐시 엔트리를 snapshot_path 기준으로 그룹핑해서 한 번에 저장
     cache_updates = defaultdict(dict)
