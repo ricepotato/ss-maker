@@ -276,11 +276,18 @@
       const GRID_SIZE_MIN = 80;
       const GRID_SIZE_MAX = 400;
       const GRID_SIZE_STEP = 30;
-      let gridItemSize = 180;
+      const _urlSize = parseInt(new URLSearchParams(window.location.search).get("size"));
+      let gridItemSize = (_urlSize >= GRID_SIZE_MIN && _urlSize <= GRID_SIZE_MAX) ? _urlSize : 180;
 
       function setGridSize(size) {
         gridItemSize = Math.min(GRID_SIZE_MAX, Math.max(GRID_SIZE_MIN, size));
         document.getElementById("grid-list").style.setProperty("--grid-item-size", gridItemSize + "px");
+        const params = new URLSearchParams(window.location.search);
+        params.set("size", gridItemSize);
+        history.replaceState(null, "", "?" + params.toString());
+        document.querySelectorAll("#grid-list .folder-item").forEach((a) => {
+          a.href = `${a.dataset.folder}/gallery.html?size=${gridItemSize}`;
+        });
       }
 
       function init() {
@@ -322,6 +329,7 @@
         }
 
         renderGrid();
+        setGridSize(gridItemSize);
 
         document.getElementById("btnGrid").addEventListener("click", openGrid);
         document
@@ -388,7 +396,7 @@
 
           const a = document.createElement("a");
           a.className = "folder-item";
-          a.href = `${name}/gallery.html`;
+          a.href = `${name}/gallery.html?size=${gridItemSize}`;
           a.dataset.folder = name;
 
           if (thumbnails.length > 0) {
