@@ -130,14 +130,7 @@ def resize_job(target: str, resize: bool):
     sub_dirs = get_immediate_sub_dirs(target_path)
     folder_data = []
     for d in sorted(sub_dirs):
-        thumb_dir = d / THUMBNAIL_PATH
-        thumbnails = []
-        if thumb_dir.exists():
-            thumb_files = sorted(
-                f for f in thumb_dir.iterdir()
-                if f.suffix.lower() in [".jpg", ".png", ".jpeg", ".tiff", ".webp"]
-            )[:4]
-            thumbnails = [f"{d.name}/{THUMBNAIL_PATH}/{f.name}" for f in thumb_files]
+        thumbnails = find_thumbnails_recursive(d, target_path)
         folder_data.append({"name": d.name, "thumbnails": thumbnails})
 
     if not file_names and not folder_data:
@@ -155,6 +148,34 @@ def get_immediate_sub_dirs(target: pathlib.Path) -> list[pathlib.Path]:
         for x in target.iterdir()
         if x.is_dir() and x.name not in excluded and not x.name.startswith(".")
     ]
+
+
+def find_thumbnails_recursive(
+    folder: pathlib.Path, base: pathlib.Path, max_count: int = 4
+) -> list[str]:
+    """folder의 .thumbnails에서 썸네일을 찾고, 없으면 하위 폴더를 재귀 탐색하여 반환.
+    경로는 base 기준 상대 경로(슬래시 구분자)로 반환."""
+    thumb_dir = folder / THUMBNAIL_PATH
+    if thumb_dir.exists():
+        thumb_files = sorted(
+            f
+            for f in thumb_dir.iterdir()
+            if f.suffix.lower() in [".jpg", ".png", ".jpeg", ".tiff", ".webp"]
+        )
+        if thumb_files:
+            return [
+                str(f.relative_to(base)).replace("\\", "/")
+                for f in thumb_files[:max_count]
+            ]
+
+    results: list[str] = []
+    for sub in sorted(get_immediate_sub_dirs(folder)):
+        results.extend(
+            find_thumbnails_recursive(sub, base, max_count - len(results))
+        )
+        if len(results) >= max_count:
+            break
+    return results
 
 
 def recursive_resize_job(target: str, resize: bool):
