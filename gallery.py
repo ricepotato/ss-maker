@@ -10,7 +10,7 @@ from PIL import Image
 RESIZED_PATH = ".resized"
 THUMBNAIL_PATH = ".thumbnails"
 
-MAX_WORKERS = 10
+MAX_WORKERS = 15
 
 log = logging.getLogger()
 log.addHandler(logging.StreamHandler())
@@ -78,20 +78,23 @@ def resize_image(file: pathlib.Path, out_path_name: str, height: int):
         log.info(f"Skipping {file.name} because it already exists")
         return f"{out_path_name}/{file.name}"
 
-    img = Image.open(file)
-    if img.size[1] < height:
-        log.info(f"Skipping {file.name} because it is smaller than {height}")
-        return file.name
-    # Calculate width to maintain aspect ratio
-    ratio = height / img.size[1]
-    width = int(img.size[0] * ratio)
-    # Resize with LANCZOS resampling for better quality
-    resized_image = img.resize((width, height), Image.Resampling.LANCZOS)
-    # Save with high quality
-    resized_image.save(out_path / file.name, quality=95, optimize=True)
-    log.info(f"Resized {file.name} to {out_path / file.name}")
-
-    return f"{out_path_name}/{file.name}"
+    try:
+        img = Image.open(file)
+        if img.size[1] < height:
+            log.info(f"Skipping {file.name} because it is smaller than {height}")
+            return file.name
+        # Calculate width to maintain aspect ratio
+        ratio = height / img.size[1]
+        width = int(img.size[0] * ratio)
+        # Resize with LANCZOS resampling for better quality
+        resized_image = img.resize((width, height), Image.Resampling.LANCZOS)
+        # Save with high quality
+        resized_image.save(out_path / file.name, quality=95, optimize=True)
+        log.info(f"Resized {file.name} to {out_path / file.name}")
+        return f"{out_path_name}/{file.name}"
+    except Exception as e:
+        log.warning(f"Skipping {file.name}: {e}")
+        return None
 
 
 def resize_job(target: str, resize: bool):
@@ -125,6 +128,7 @@ def resize_job(target: str, resize: bool):
         for resized_filepath, thumbnail_filepath, original_filepath in zip(
             resized_images, thumbnail_images, images_files
         )
+        if resized_filepath is not None and thumbnail_filepath is not None
     ]
 
     sub_dirs = get_immediate_sub_dirs(target_path)
