@@ -106,13 +106,17 @@ def resize_job(target: str, resize: bool):
         f"{THUMBNAIL_PATH}/{file.name}" for file in images_files
     ]
 
-    if resize and images_files and not (target_path / RESIZED_PATH).exists():
-        (target_path / RESIZED_PATH).mkdir(parents=True, exist_ok=True)
-        resized_images = resize_images(images_files, RESIZED_PATH, 2160)
+    if resize:
+        if images_files and not (target_path / RESIZED_PATH).exists():
+            (target_path / RESIZED_PATH).mkdir(parents=True, exist_ok=True)
+            resized_images = resize_images(images_files, RESIZED_PATH, 2160)
+        else:
+            log.info(
+                f"Resized images already exist in {target_path / RESIZED_PATH}, skipping resizing."
+            )
+            resized_images = [f"{file.name}" for file in images_files]
     else:
-        log.info(
-            f"Resized images already exist in {target_path / RESIZED_PATH}, skipping resizing."
-        )
+        log.info("Resize option is disabled, skipping resizing.")
         resized_images = [f"{file.name}" for file in images_files]
 
     if images_files and not (target_path / THUMBNAIL_PATH).exists():
