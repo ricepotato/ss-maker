@@ -9,6 +9,7 @@ from PIL import Image
 
 RESIZED_PATH = ".resized"
 THUMBNAIL_PATH = ".thumbnails"
+THUMBNAIL_MANIFEST = "thumbnail_manifest.json"
 
 MAX_WORKERS = 15
 
@@ -97,6 +98,34 @@ def resize_image(file: pathlib.Path, out_path_name: str, height: int):
         return None
 
 
+def needs_thumbnail_rebuild(
+    images_files: list[pathlib.Path], target_path: pathlib.Path
+) -> bool:
+    manifest_path = target_path / THUMBNAIL_PATH / THUMBNAIL_MANIFEST
+    if not (target_path / THUMBNAIL_PATH).exists() or not manifest_path.exists():
+        return True
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        manifest: dict = json.load(f)
+    current_names = {f.name for f in images_files}
+    manifest_names = set(manifest.keys())
+    return current_names != manifest_names
+
+
+def save_thumbnail_manifest(
+    thumbnail_images: list[str],
+    images_files: list[pathlib.Path],
+    target_path: pathlib.Path,
+):
+    manifest = {
+        f.name: thumb
+        for f, thumb in zip(images_files, thumbnail_images)
+        if thumb is not None
+    }
+    manifest_path = target_path / THUMBNAIL_PATH / THUMBNAIL_MANIFEST
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=2)
+
+
 def resize_job(target: str, resize: bool):
     target_path = pathlib.Path(target)
     images_files = get_image_files(target_path)
@@ -119,9 +148,10 @@ def resize_job(target: str, resize: bool):
         log.info("Resize option is disabled, skipping resizing.")
         resized_images = [f"{file.name}" for file in images_files]
 
-    if images_files and not (target_path / THUMBNAIL_PATH).exists():
+    if images_files and needs_thumbnail_rebuild(images_files, target_path):
         (target_path / THUMBNAIL_PATH).mkdir(parents=True, exist_ok=True)
         thumbnail_images = resize_images(images_files, THUMBNAIL_PATH, 250)
+        save_thumbnail_manifest(thumbnail_images, images_files, target_path)
     else:
         log.info(
             f"Thumbnail images already exist in {target_path / THUMBNAIL_PATH}, skipping resizing."
