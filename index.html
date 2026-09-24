@@ -134,7 +134,7 @@
 
       ul.list-view.grid-view .list-item__image_container img {
         width: 100%;
-        height: 120px;
+        height: 220px;
       }
 
       ul.list-view.grid-view .list-item__info {
@@ -295,18 +295,61 @@
       .list-item__dir-count {
         color: #888;
         font-size: 12px;
-        margin-left: 4px;
       }
 
-      ul.list-view.grid-view li.list-item--dir {
+      /* folder mosaic (바둑판 미리보기) */
+      .dir-mosaic {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+        gap: 1px;
+        width: 160px;
+        height: 90px;
+        background: #ddd;
+        flex-shrink: 0;
+      }
+
+      ul.list-view li.list-item--dir .dir-mosaic img {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        object-fit: cover;
+      }
+
+      .dir-mosaic--1 {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr;
+      }
+
+      .dir-mosaic--2 {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: 1fr;
+      }
+
+      .dir-mosaic--3 {
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: 1fr;
+      }
+
+      .dir-mosaic--4 {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+      }
+
+      .dir-mosaic--empty {
         display: flex;
         align-items: center;
+        justify-content: center;
+        background: #eef2f8;
       }
 
-      ul.list-view.grid-view li.list-item--dir .list-item__container {
-        flex-direction: row;
-        padding: 12px;
-        align-items: center;
+      ul.list-view.grid-view .dir-mosaic {
+        width: 100%;
+        height: 220px;
+      }
+
+      ul.list-view.grid-view .dir-mosaic--empty .list-item__dir-icon {
+        font-size: 64px;
       }
 
       /* breadcrumb */

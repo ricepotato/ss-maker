@@ -23,11 +23,21 @@ function renderApp() {
     const li = document.createElement("li");
     li.className = "list-item list-item--dir";
     const count = countFiles(dir);
+    let previews = collectPreviews(dir, DIR_PREVIEW_COUNT);
+    // 4~5개는 2x2로 맞추기 위해 4개만 사용
+    if (previews.length === 5) previews = previews.slice(0, 4);
+    const mosaic = previews.length
+      ? `<div class="dir-mosaic dir-mosaic--${previews.length}">${previews
+          .map((src) => `<img src='${src}' loading='lazy'/>`)
+          .join("")}</div>`
+      : `<div class="dir-mosaic dir-mosaic--empty"><span class="list-item__dir-icon">&#128193;</span></div>`;
     li.innerHTML = `
       <div class="list-item__container">
-        <span class="list-item__dir-icon">&#128193;</span>
-        <span class="list-item__name">${dir.name}</span>
-        <span class="list-item__dir-count">${count}개 파일</span>
+        <div class="list-item__image_container">${mosaic}</div>
+        <div class="list-item__info">
+          <div class="list-item__name">&#128193; ${dir.name}</div>
+          <div class="list-item__dir-count">${count}개 파일</div>
+        </div>
       </div>`;
     li.addEventListener("click", () => {
       navigateTo(dir, [...navStack, currentNode]);
@@ -57,6 +67,28 @@ function countFiles(node) {
     else count += countFiles(child);
   }
   return count;
+}
+
+const DIR_PREVIEW_COUNT = 6;
+
+// 폴더 내부 항목의 미리보기 이미지를 너비 우선으로 수집
+function collectPreviews(node, limit) {
+  const result = [];
+  const queue = [node];
+  while (queue.length && result.length < limit) {
+    const cur = queue.shift();
+    for (const child of cur.children) {
+      if (result.length >= limit) break;
+      if (child.type === "dir") {
+        queue.push(child);
+      } else if (child.kind === "image") {
+        result.push(child.thumbnail || child.target);
+      } else if (child.snapshots && child.snapshots.length) {
+        result.push(child.snapshots[0]);
+      }
+    }
+  }
+  return result;
 }
 
 function updateNav() {
