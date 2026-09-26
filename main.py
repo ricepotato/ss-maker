@@ -294,6 +294,99 @@ def dump_jsonfile(snapshots: List[Snapshot], output_path, root_path: pathlib.Pat
     copy_to_path("app.js", output_path)
 
 
+STANDALONE_PREVIEW_COUNT = 6
+
+
+def _rel_posix(path: str, base: pathlib.Path) -> str:
+    return pathlib.Path(os.path.relpath(path, base)).as_posix()
+
+
+def _count_files(node: dict) -> int:
+    return sum(1 if c["type"] == "file" else _count_files(c) for c in node["children"])
+
+
+def _collect_previews(node: dict, limit: int) -> List[str]:
+    # 폴더 내부 항목의 미리보기 이미지를 너비 우선으로 수집 (app.js collectPreviews 와 동일)
+    result = []
+    queue = [node]
+    while queue and len(result) < limit:
+        cur = queue.pop(0)
+        for child in cur["children"]:
+            if len(result) >= limit:
+                break
+            if child["type"] == "dir":
+                queue.append(child)
+            elif child.get("kind") == "image":
+                result.append(child.get("thumbnail") or child["target"])
+            elif child.get("snapshots"):
+                result.append(child["snapshots"][0])
+    return result
+
+
+def _standalone_node(node: dict, dir_path: pathlib.Path, crumbs: List[str]) -> dict:
+    """폴더 하나의 index.html 에 들어갈 데이터. 경로는 모두 해당 폴더 기준 상대경로."""
+    children = []
+    for child in node["children"]:
+        if child["type"] == "dir":
+            children.append({
+                "type": "dir",
+                "name": child["name"],
+                "count": _count_files(child),
+                "previews": [
+                    _rel_posix(p, dir_path)
+                    for p in _collect_previews(child, STANDALONE_PREVIEW_COUNT)
+                ],
+            })
+            continue
+        item = dict(child)
+        item["target"] = _rel_posix(child["target"], dir_path)
+        if "snapshots" in item:
+            item["snapshots"] = [_rel_posix(p, dir_path) for p in child["snapshots"]]
+        if item.get("thumbnail"):
+            item["thumbnail"] = _rel_posix(child["thumbnail"], dir_path)
+        children.append(item)
+    return {
+        "type": "dir",
+        "name": node["name"],
+        "standalone": True,
+        "crumbs": crumbs,
+        "children": children,
+    }
+
+
+def _inline_script(html: str, src: str, content: str) -> str:
+    tag = f'<script src="{src}"></script>'
+    if tag not in html:
+        raise ValueError(f"script tag not found in index.html: {tag}")
+    # </script> 가 데이터 안에 있으면 태그가 조기 종료되므로 이스케이프
+    content = content.replace("</", "<\\/")
+    return html.replace(tag, f"<script>\n{content}\n</script>")
+
+
+def dump_standalone(snapshots: List[Snapshot], root_path: pathlib.Path):
+    """각 폴더마다 데이터/스크립트가 인라인된 index.html 을 하나씩 생성."""
+    tree = build_tree(snapshots, root_path)
+    with open("index.html", "r", encoding="utf-8") as f:
+        template = f.read()
+    with open("app.js", "r", encoding="utf-8") as f:
+        app_js = f.read()
+
+    def walk(node: dict, dir_path: pathlib.Path, crumbs: List[str]):
+        data = _standalone_node(node, dir_path, crumbs)
+        data_js = "const videos=" + json.dumps(data, ensure_ascii=False)
+        html = _inline_script(template, "snapshots.js", data_js)
+        html = _inline_script(html, "app.js", app_js)
+        out = dir_path / "index.html"
+        with open(out, "w", encoding="utf-8") as f:
+            f.write(html)
+        log.info("standalone index written: %s", out)
+        for child in node["children"]:
+            if child["type"] == "dir":
+                walk(child, dir_path / child["name"], crumbs + [child["name"]])
+
+    walk(tree, root_path, [tree["name"]])
+
+
 def find_mp4_files(root: pathlib.Path, recursive: bool = False) -> List[pathlib.Path]:
     target = scan_dir(root, ".mp4")
 
@@ -312,8 +405,12 @@ def find_mp4_files(root: pathlib.Path, recursive: bool = False) -> List[pathlib.
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--target", required=True)
-    parser.add_argument("--recursive", default=False, action="store_true")
+    parser.add_argument("-t", "--target", required=True)
+    parser.add_argument("-r", "--recursive", default=False, action="store_true")
+    parser.add_argument(
+        "-s", "--standalone", default=False, action="store_true",
+        help="폴더마다 독립 실행 가능한 index.html 생성",
+    )
     args = parser.parse_args()
 
     if not os.path.exists(args.target):
@@ -355,7 +452,10 @@ def main():
         cache.update(entries)
         save_hash_cache(snapshot_path, cache)
 
-    dump_jsonfile(all_results, args.target, root_path)
+    if args.standalone:
+        dump_standalone(all_results, root_path)
+    else:
+        dump_jsonfile(all_results, args.target, root_path)
 
 
 

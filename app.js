@@ -5,6 +5,22 @@ let currentNode = videos; // videos is the tree root node
 let viewerMode = "fit"; // 'fit' | 'original'
 let hasDragged = false;
 
+// standalone 모드: 폴더마다 생성된 index.html 에 해당 폴더 데이터만 인라인되어 있음
+const STANDALONE = videos.standalone === true;
+
+// standalone 모드에서는 경로가 index.html 기준 상대경로이므로 URL 인코딩
+function toUrl(path) {
+  if (!STANDALONE) return path;
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
+// PotPlayer 는 절대경로가 필요하므로 상대경로를 현재 페이지 위치 기준으로 변환
+function toPotPath(path) {
+  if (!STANDALONE) return path.replace(/\\/gi, "/");
+  const url = new URL(toUrl(path), location.href);
+  return decodeURIComponent(url.pathname).replace(/^\/([A-Za-z]:)/, "$1");
+}
+
 function renderApp() {
   const appEl = document.getElementById("app");
   appEl.innerHTML = "";
@@ -28,7 +44,7 @@ function renderApp() {
     if (previews.length === 5) previews = previews.slice(0, 4);
     const mosaic = previews.length
       ? `<div class="dir-mosaic dir-mosaic--${previews.length}">${previews
-          .map((src) => `<img src='${src}' loading='lazy'/>`)
+          .map((src) => `<img src='${toUrl(src)}' loading='lazy'/>`)
           .join("")}</div>`
       : `<div class="dir-mosaic dir-mosaic--empty"><span class="list-item__dir-icon">&#128193;</span></div>`;
     li.innerHTML = `
@@ -40,6 +56,10 @@ function renderApp() {
         </div>
       </div>`;
     li.addEventListener("click", () => {
+      if (STANDALONE) {
+        location.href = encodeURIComponent(dir.name) + "/index.html";
+        return;
+      }
       navigateTo(dir, [...navStack, currentNode]);
     });
     ul.appendChild(li);
@@ -61,6 +81,7 @@ function renderApp() {
 }
 
 function countFiles(node) {
+  if (node.count !== undefined) return node.count;
   let count = 0;
   for (const child of node.children) {
     if (child.type === "file") count++;
@@ -73,6 +94,7 @@ const DIR_PREVIEW_COUNT = 6;
 
 // 폴더 내부 항목의 미리보기 이미지를 너비 우선으로 수집
 function collectPreviews(node, limit) {
+  if (node.previews) return node.previews.slice(0, limit);
   const result = [];
   const queue = [node];
   while (queue.length && result.length < limit) {
@@ -94,6 +116,24 @@ function collectPreviews(node, limit) {
 function updateNav() {
   const btnBack = document.getElementById("btnBack");
   const breadcrumb = document.getElementById("breadcrumb");
+  if (STANDALONE) {
+    const crumbs = videos.crumbs || [videos.name];
+    btnBack.disabled = crumbs.length <= 1;
+    breadcrumb.innerHTML = "";
+    crumbs.forEach((name, i) => {
+      if (i > 0) breadcrumb.appendChild(document.createTextNode(" / "));
+      const depth = crumbs.length - 1 - i;
+      if (depth === 0) {
+        breadcrumb.appendChild(document.createTextNode(name));
+        return;
+      }
+      const a = document.createElement("a");
+      a.href = "../".repeat(depth) + "index.html";
+      a.textContent = name;
+      breadcrumb.appendChild(a);
+    });
+    return;
+  }
   btnBack.disabled = navStack.length === 0;
   const parts = navStack.map((n) => n.name).concat(currentNode.name);
   breadcrumb.textContent = parts.join(" / ");
@@ -141,23 +181,24 @@ function ListItem({ target, initialState }) {
     target.innerHTML = `
     <div class="list-item__container">
       <div class="list-item__image_container">
-        <img src='${this.state.snapshots[this.currentIndex]}' loading='lazy'/>
+        <img src='${toUrl(this.state.snapshots[this.currentIndex])}' loading='lazy'/>
       </div>
       <div class="list-item__info">
         <div class="list-item__dirname">${this.state.dirname}</div>
         <div class="list-item__name">${this.state.name}</div>
         <div class="list-item__links">
           <span class="kind-badge badge--video">동영상</span>
-          <a target="_blank" href="potplayer://${this.state.target.replace(/\\/gi, "/")}">pot</a> |
-          <a target="_blank" href="${this.state.target}">browser</a>
+          <a target="_blank" href="potplayer://${toPotPath(this.state.target)}">pot</a> |
+          <a target="_blank" href="${toUrl(this.state.target)}">browser</a>
         </div>
       </div>
     </div>`;
     const img = target.querySelector("img");
     img.addEventListener("click", () => {
       this.currentIndex++;
-      img.src =
-        this.state.snapshots[this.currentIndex % this.state.snapshots.length];
+      img.src = toUrl(
+        this.state.snapshots[this.currentIndex % this.state.snapshots.length],
+      );
     });
   };
   render();
@@ -169,7 +210,7 @@ function ImageItem({ target, initialState }) {
     target.innerHTML = `
     <div class="list-item__container">
       <div class="list-item__image_container">
-        <img src='${thumbSrc}' loading='lazy'/>
+        <img src='${toUrl(thumbSrc)}' loading='lazy'/>
       </div>
       <div class="list-item__info">
         <div class="list-item__dirname">${initialState.dirname}</div>
@@ -189,7 +230,7 @@ function ImageItem({ target, initialState }) {
 // Image viewer
 function openImageViewer(src) {
   const viewer = document.getElementById("imageViewer");
-  document.getElementById("imageViewerImg").src = src;
+  document.getElementById("imageViewerImg").src = toUrl(src);
   viewer.classList.remove("hidden");
   setViewerMode("fit");
 }
@@ -256,6 +297,11 @@ function setViewerMode(mode) {
 
 // Initialize: restore from hash or set root state
 (function () {
+  if (STANDALONE) {
+    updateNav();
+    renderApp();
+    return;
+  }
   const hash = location.hash.slice(1);
   if (hash) {
     const result = findNodeByPath(hash);
@@ -274,6 +320,7 @@ function setViewerMode(mode) {
 })();
 
 window.addEventListener("popstate", (e) => {
+  if (STANDALONE) return;
   const path = e.state && e.state.path ? e.state.path : "";
   const result = findNodeByPath(path) || { node: videos, stack: [] };
   navStack = result.stack;
@@ -284,6 +331,10 @@ window.addEventListener("popstate", (e) => {
 });
 
 document.getElementById("btnBack").addEventListener("click", () => {
+  if (STANDALONE) {
+    location.href = "../index.html";
+    return;
+  }
   if (navStack.length > 0) {
     navigateTo(navStack[navStack.length - 1], navStack.slice(0, -1));
   }

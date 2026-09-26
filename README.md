@@ -26,6 +26,16 @@ python main.py --target C:\path\to\videos
 python main.py --target C:\path\to\videos --recursive
 ```
 
+- 폴더마다 독립적으로 동작하는 `index.html`을 만들려면 `--standalone`(`-s`) 옵션을 추가합니다:
+
+```powershell
+python main.py --target C:\path\to\videos --recursive --standalone
+```
+
+  - 각 폴더에 데이터와 스크립트가 인라인된 `index.html` 하나만 생성됩니다(`snapshots.js`, `app.js` 불필요).
+  - 모든 경로는 해당 `index.html` 기준 상대경로이므로 폴더를 옮기거나 하위 폴더만 따로 열어도 동작합니다.
+  - 하위 폴더 클릭 / 상위 버튼 / 경로 표시줄은 각 폴더의 `index.html`로 이동하는 링크입니다.
+
 출력
 - 각 비디오의 부모 폴더에 `.snapshots/{sha256}/` 디렉터리가 생성되고 그 안에 JPG 파일(기본 16장)이 들어갑니다.
 - 대상 폴더(명시한 `--target`)에 `snapshots.json` (메타 정보 목록)과 `snapshots.js`(`const videos = ...`)가 생성됩니다.
